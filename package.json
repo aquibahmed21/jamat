@@ -1,0 +1,15 @@
+{
+  "name": "jamat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Jamaat expense manager (static PWA, no runtime dependencies)",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "start": "npm run build && npm run serve",
+    "check:text": "node scripts/check-text.mjs",
+    "test": "node --test"
+  }
+}
