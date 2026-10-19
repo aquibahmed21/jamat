@@ -10,6 +10,11 @@ export const FOOD_BASES = ["meal", "duration"] as const;
 export const TREAT_KINDS = ["personal", "jamaat"] as const;
 export const APPOINTMENT_KINDS = ["permanent", "temporary"] as const;
 export const PLACE_TYPES = ["masjid", "musalla", "aashu_khana", "other"] as const;
+export const VEHICLE_TYPES = ["car", "bike", "taxi", "other"] as const;
+export const TRANSPORT_COSTS = ["fare", "fuel"] as const;
+
+/** Largest single amount accepted (Rs 1 billion in paise): keeps every sum of records inside the safe-integer range. */
+export const MAX_AMOUNT_PAISE = 100_000_000_000;
 
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 export type PaymentSource = (typeof PAYMENT_SOURCES)[number];
@@ -17,6 +22,11 @@ export type FoodBasis = (typeof FOOD_BASES)[number];
 export type TreatKind = (typeof TREAT_KINDS)[number];
 export type AppointmentKind = (typeof APPOINTMENT_KINDS)[number];
 export type PlaceType = (typeof PLACE_TYPES)[number];
+export type VehicleType = (typeof VEHICLE_TYPES)[number];
+export type TransportCost = (typeof TRANSPORT_COSTS)[number];
+
+/** Money-movement records between members / the Jamaat fund (as opposed to costs split among members). */
+export const TRANSFER_CATEGORIES: readonly ExpenseCategory[] = ["contribution", "advance", "reimbursement", "settlement", "refund"];
 
 export interface Stamps {
   createdAt: number;
@@ -70,6 +80,10 @@ export interface Expense extends Stamps {
   foodBasis: FoodBasis | null;
   /** Required for treats, null otherwise. */
   treatKind: TreatKind | null;
+  /** Transport only: the vehicle used (null = not specified). */
+  vehicle: VehicleType | null;
+  /** Transport only: whether the cost is a fare/ticket or fuel (paid personally or from Jamaat funds as usual). */
+  transportCost: TransportCost | null;
   /** Refund -> the advance returned; reimbursement -> the expense being paid back. Null otherwise. */
   linkedExpenseId: string | null;
   /** Food, meal-based: the meals the expense covers (epoch ms, ascending). Empty otherwise. */

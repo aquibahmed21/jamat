@@ -51,6 +51,7 @@ export function timeList(opts: { label: string; hint?: string; initial?: readonl
   );
   return {
     root,
+    focus: () => input.focus(),
     values: () => [...items],
     setError(message) {
       error.hidden = message === null;

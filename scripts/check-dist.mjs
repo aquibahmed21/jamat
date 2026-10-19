@@ -16,6 +16,16 @@ for (const [, url] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
   else if (!has(url.replace(/^\.\//, "").split(/[?#]/)[0])) bad(`index.html: missing file ${url}`);
 }
 
+// Content-Security-Policy must exist and must not allow inline code or remote hosts.
+const csp = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html)?.[1];
+if (!csp) bad("index.html: no Content-Security-Policy meta");
+else {
+  if (/unsafe-inline|unsafe-eval|https?:|\*/.test(csp)) bad(`CSP is too permissive: ${csp}`);
+  for (const d of ["default-src 'none'", "script-src 'self'", "object-src 'none'", "base-uri 'none'"]) if (!csp.includes(d)) bad(`CSP lacks ${d}`);
+}
+if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html)) bad("index.html: inline <script>");
+if (/\sstyle="/.test(html) || /<style[\s>]/.test(html)) bad("index.html: inline style");
+
 // Manifest
 if (!has("manifest.webmanifest")) bad("manifest missing");
 else {

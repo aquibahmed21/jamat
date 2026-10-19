@@ -11,6 +11,9 @@ import { renderHome } from "./features/home/view.ts";
 import { renderBackup } from "./features/backup/view.ts";
 import { startPwa } from "./pwa.ts";
 import { button } from "./ui/button.ts";
+import { confirmDialog } from "./ui/dialog.ts";
+import { isDirty, setDirty } from "./ui/dirty.ts";
+import { applyPendingFocus } from "./ui/focus.ts";
 
 const routes: RouteKey[] = ["home", "members", "expenses", "programme", "places", "backup"];
 const title = document.getElementById("app-title") as HTMLElement;
@@ -23,8 +26,16 @@ const net = document.getElementById("net") as HTMLElement;
 let applyUpdate: (() => void) | null = null;
 let online = true;
 
+/** "Skip to content": the first Tab stop on every page, so keyboard users can bypass the navigation. */
+const skip = document.createElement("button");
+skip.className = "skip";
+skip.type = "button";
+skip.addEventListener("click", () => view.focus());
+(document.querySelector(".app") as HTMLElement).prepend(skip);
+
 /** Update prompt and offline badge: both are redrawn on language change. */
 function renderStatus(): void {
+  skip.textContent = gt().common.skip;
   const t = gt().pwa;
   net.hidden = online;
   net.textContent = online ? "" : t.offline;
@@ -53,7 +64,15 @@ function renderLanguage(): void {
     o.selected = l === getLanguage();
     select.append(o);
   }
-  select.addEventListener("change", () => setLanguage(select.value as Lang));
+  select.addEventListener("change", async () => {
+    const next = select.value as Lang;
+    if (isDirty()) {
+      const c = gt().common;
+      const ok = await confirmDialog({ title: c.discardTitle, message: c.languageDiscard, confirmLabel: c.discard, destructive: true });
+      if (!ok) { select.value = getLanguage(); return; }
+    }
+    setLanguage(next);
+  });
   lang.replaceChildren(icon("language"), select);
 }
 
@@ -86,11 +105,7 @@ async function renderView(route: RouteKey | null, rest: string[]): Promise<void>
   document.title = `${name} · ${t.appName}`;
   const renderer = route ? renderers[route] : undefined;
   if (!renderer) {
-    view.replaceChildren(
-      route
-        ? emptyState(name, t.states.comingSoon, route)
-        : emptyState(name, t.states.notFoundHint, "warning"),
-    );
+    view.replaceChildren(emptyState(name, t.states.notFoundHint, "warning"));
     return;
   }
   const token = ++renderToken;
@@ -101,11 +116,19 @@ async function renderView(route: RouteKey | null, rest: string[]): Promise<void>
   } catch (e) {
     content = errorState(t.states.errorTitle, errorText(e), render);
   }
-  if (token === renderToken) view.replaceChildren(content);
+  if (token !== renderToken) return;
+  // A re-render replaces the element that had focus; put focus back (or on the page) instead of losing it.
+  const hadFocus = view.contains(document.activeElement) && document.activeElement !== view;
+  view.replaceChildren(content);
+  if (!applyPendingFocus(view) && hadFocus) view.focus();
 }
+
+let currentHash = location.hash;
 
 function render(): void {
   renderToken++;
+  setDirty(false);
+  currentHash = location.hash;
   const { route, rest } = parseHash();
   document.documentElement.lang = getLanguage() === "en" ? "en" : "ur-Latn";
   title.textContent = gt().appName;
@@ -117,7 +140,19 @@ function render(): void {
 
 loadLanguage();
 onLanguageChange(render);
-window.addEventListener("hashchange", () => { render(); view.focus(); });
+let reverting = false;
+window.addEventListener("hashchange", async () => {
+  if (reverting) { reverting = false; return; }
+  if (isDirty()) {
+    // The address already changed (link, tab or Back): ask before throwing away what was typed, else go back.
+    const c = gt().common;
+    const ok = await confirmDialog({ title: c.discardTitle, message: c.discardText, confirmLabel: c.discard, destructive: true });
+    if (!ok) { reverting = true; location.hash = currentHash; return; }
+  }
+  render();
+  view.focus();
+});
+window.addEventListener("beforeunload", (e) => { if (isDirty()) e.preventDefault(); });
 render();
 startPwa({
   onUpdateReady: (apply) => { applyUpdate = apply; renderStatus(); },

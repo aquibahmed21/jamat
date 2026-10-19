@@ -4,7 +4,7 @@ import type { AmeerAppointment } from "../../model/types.ts";
 import { validateAppointment, type Result } from "../../model/validate.ts";
 import { appointmentConflicts } from "../../domain/ameer.ts";
 
-export async function saveAppointment(db: Db, input: unknown, isNew: boolean): Promise<Result<AmeerAppointment>> {
+export async function saveAppointment(db: Db, input: unknown, isNew: boolean, expectedUpdatedAt?: number): Promise<Result<AmeerAppointment>> {
   const v = validateAppointment(input);
   if (!v.ok) return v;
   const jamaat = await db.jamaats.get(v.value.jamaatId);
@@ -17,7 +17,7 @@ export async function saveAppointment(db: Db, input: unknown, isNew: boolean): P
   const issues = appointmentConflicts(v.value, others, jamaat, members.items);
   if (issues.length > 0) return { ok: false, issues };
   if (isNew) await db.appointments.add(v.value);
-  else await db.appointments.update(v.value);
+  else await db.appointments.update(v.value, expectedUpdatedAt);
   return v;
 }
 

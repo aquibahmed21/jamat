@@ -51,10 +51,10 @@ async function context(db: Db, jamaatId: string): Promise<{ members: Member[]; a
  * Saves a record. Returns issues to show on the form, or the saved record. The record and its audit entry
  * are written in one atomic batch. A change that would make any ledger rule fail is refused.
  */
-export async function saveExpense(db: Db, input: unknown, isNew: boolean): Promise<Result<Expense>> {
+export async function saveExpense(db: Db, input: unknown, isNew: boolean, expectedUpdatedAt?: number): Promise<Result<Expense>> {
   const v = validateExpense(input);
   if (!v.ok) return v;
-  const e = v.value;
+  let e = v.value;
   const { members, all } = await context(db, e.jamaatId);
   const issues = expenseConflicts(e, all, members);
 
@@ -63,6 +63,11 @@ export async function saveExpense(db: Db, input: unknown, isNew: boolean): Promi
     const split = allocateExpense(e, members);
     const issue = split.ok ? null : ALLOCATION_ISSUE[split.error];
     if (issue) issues.push(issue);
+    else if (split.ok && split.method !== "personal" && e.participantIds.length === 0) {
+      // "Everyone present" is resolved NOW and stored. Otherwise members added or edited later would silently change
+      // the split of a record that was already settled.
+      e = { ...e, participantIds: split.rows.map((r) => r.beneficiaryId) };
+    }
   }
 
   const previous = all.find((x) => x.id === e.id) ?? null;
@@ -74,9 +79,11 @@ export async function saveExpense(db: Db, input: unknown, isNew: boolean): Promi
   }
   if (issues.length > 0) return { ok: false, issues };
 
+  // Optimistic concurrency: refuse to overwrite a record that changed since the form was opened.
+  if (!isNew && expectedUpdatedAt !== undefined) await db.expenses.assertUnchanged(e.id, expectedUpdatedAt);
   const write = isNew ? db.expenses.addOp(e) : db.expenses.updateOp(e);
   await db.batch([write, auditOp(db, isNew ? "create" : "update", isNew ? null : previous, e)]);
-  return v;
+  return { ok: true, value: e };
 }
 
 /**

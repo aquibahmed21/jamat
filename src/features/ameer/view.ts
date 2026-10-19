@@ -14,6 +14,7 @@ import { editor } from "../../ui/editor.ts";
 import { APPOINTMENT_KINDS, type AppointmentKind } from "../../model/types.ts";
 import type { ViewContext } from "../members/view.ts";
 import { deleteAppointment, saveAppointment } from "./service.ts";
+import { notify } from "../../ui/toast.ts";
 
 const BACK = "#/members";
 
@@ -50,7 +51,7 @@ export function ameerSection(
       destructive: true,
     });
     if (!ok) return;
-    try { await deleteAppointment(db, a.id); } catch (e) { await alertDialog(t.title, errorText(e)); }
+    try { await deleteAppointment(db, a.id); notify(c.deleted); } catch (e) { await alertDialog(t.title, errorText(e)); }
     ctx.refresh();
   };
 
@@ -123,6 +124,6 @@ export function ameerForm(
       endAt: fromInputValue(fields.endAt.input.value),
       createdAt, updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveAppointment(db, input, current === null),
+    save: (input) => saveAppointment(db, input, current === null, current?.updatedAt),
   });
 }

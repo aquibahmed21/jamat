@@ -2,7 +2,7 @@ import type { ValidationIssue } from "../model/validate.ts";
 
 export const DB_ERROR_CODES = [
   "unavailable", "blocked", "newerVersion", "upgradeFailed", "transaction",
-  "quota", "malformed", "exists", "notFound", "inUse", "invalid", "unknown",
+  "quota", "malformed", "exists", "notFound", "inUse", "conflict", "invalid", "unknown",
 ] as const;
 export type DbErrorCode = (typeof DB_ERROR_CODES)[number];
 

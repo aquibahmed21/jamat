@@ -36,6 +36,21 @@ jobs:
         with:
           path: dist
 
+  # Browser checks run alongside the deploy and never block it (headless Chrome can be flaky on shared runners).
+  ui-checks:
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --global typescript@5.9.2
+      - run: npm run build
+      - run: npm run smoke:ui
+      - run: AUDIT_QUICK=1 npm run audit:ui
+
   deploy:
     needs: build
     runs-on: ubuntu-latest

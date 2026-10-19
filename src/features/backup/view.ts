@@ -12,6 +12,7 @@ import { downloadText } from "../../ui/download.ts";
 import { el, uid } from "../../ui/dom.ts";
 import { errorText } from "../../ui/errors.ts";
 import { selectField } from "../../ui/form.ts";
+import { finishTable } from "../../ui/table.ts";
 import type { ViewContext } from "../members/view.ts";
 
 function sectionName(store: string): string {
@@ -104,10 +105,10 @@ async function previewFor(ctx: ViewContext, db: Db, text: string): Promise<HTMLE
 function validPreview(ctx: ViewContext, db: Db, backup: ParsedBackup, plan: RestorePlan): HTMLElement {
   const t = gt().backup;
   const cell = (tag: "th" | "td", text: string, cls = "") => el(tag, { text, class: cls });
-  const table = el("div", { class: "scroll" }, el("table", { class: "table" },
+  const table = el("div", { class: "scroll" }, finishTable(el("table", { class: "table" },
     el("thead", {}, el("tr", {}, cell("th", t.section), cell("th", t.inFile, "num"), cell("th", t.onDevice, "num"))),
-    el("tbody", {}, ...STORE_NAMES.map((s) => el("tr", {}, cell("td", t.sections[s]), cell("td", String(plan.incoming[s]), "num"), cell("td", String(plan.current[s]), "num")))),
-  ));
+    el("tbody", {}, ...STORE_NAMES.map((s) => el("tr", {}, cell("th", t.sections[s]), cell("td", String(plan.incoming[s]), "num"), cell("td", String(plan.current[s]), "num")))),
+  ), t.importTitle));
 
   const options = [{ value: "replace", label: t.replace }, ...(plan.merge.available ? [{ value: "merge", label: t.merge }] : [])];
   const mode = selectField({ label: t.mode, options, value: "replace" });

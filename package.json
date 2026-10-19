@@ -11,6 +11,13 @@
     "start": "npm run build && npm run serve",
     "check:text": "node scripts/check-text.mjs",
     "test": "node --test",
-    "check:dist": "node scripts/check-dist.mjs"
+    "check:dist": "node scripts/check-dist.mjs",
+    "audit:ui": "node scripts/audit-ui.mjs",
+    "smoke:ui": "node scripts/smoke-ui.mjs",
+    "verify:live": "node scripts/verify-live.mjs",
+    "check": "npm run typecheck && npm run check:text && npm test && npm run build && npm run check:dist"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

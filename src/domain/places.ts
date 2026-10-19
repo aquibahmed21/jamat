@@ -1,5 +1,6 @@
 import type { Jamaat, Member, Mulaqaat, Place } from "../model/types.ts";
 import type { ValidationIssue } from "../model/validate.ts";
+import { periodIssues } from "./periods.ts";
 
 const COORD_RE = /^-?\d{1,3}(\.\d+)?$/;
 
@@ -46,8 +47,7 @@ export function mulaqaatConflicts(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (!places.some((p) => p.id === m.placeId)) issues.push({ field: "placeId", code: "invalidId" });
-  if (m.at < jamaat.startAt) issues.push({ field: "at", code: "beforeJamaatStart" });
-  if (jamaat.endAt !== null && m.at >= jamaat.endAt) issues.push({ field: "at", code: "afterJamaatEnd" });
+  issues.push(...periodIssues("at", m.at, "at", null, jamaat));
   if (m.personIds.some((id) => !members.some((x) => x.id === id))) issues.push({ field: "personIds", code: "notAMember" });
   return issues;
 }

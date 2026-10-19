@@ -14,6 +14,7 @@ import { ameerForm, ameerSection } from "../ameer/view.ts";
 import { emptyState } from "../../ui/states.ts";
 import { newId } from "../../model/id.ts";
 import { deleteJamaat, deleteMember, listMembers, loadJamaat, saveJamaat, saveMember } from "./service.ts";
+import { notify } from "../../ui/toast.ts";
 
 export interface ViewContext {
   rest: string[];
@@ -76,7 +77,7 @@ function overview(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], a
       destructive: true,
     });
     if (!ok) return;
-    try { await deleteJamaat(db, jamaat.id); } catch (e) { await showError(e); }
+    try { await deleteJamaat(db, jamaat.id); notify(c.deleted); } catch (e) { await showError(e); }
     ctx.refresh();
   };
 
@@ -92,7 +93,7 @@ function overview(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], a
 
   const present = members.filter((m) => isPresentAt(m, now)).length;
   const head = el("div", { class: "toolbar" },
-    el("p", { class: "muted", text: fmt(t.presentNow, { n: present, total: members.length }) }),
+    el("div", {}, el("h2", { text: gt().nav.members }), el("p", { class: "muted", text: fmt(t.presentNow, { n: present, total: members.length }) })),
     button({ label: t.addMember, icon: "plus", variant: "primary", onClick: () => ctx.go(`${LIST}/new`) }),
   );
 
@@ -123,6 +124,7 @@ function memberRow(ctx: ViewContext, db: Db, jamaat: Jamaat, m: Member, now: num
     if (!ok) return;
     try {
       await deleteMember(db, m.id);
+      notify(c.deleted);
     } catch (e) {
       const inUse = e instanceof DbError && e.code === "inUse";
       await alertDialog(t.cannotDelete, inUse ? `${errorText(e)}. ${t.leaveInstead}` : errorText(e));
@@ -171,7 +173,7 @@ function jamaatForm(ctx: ViewContext, db: Db, current: Jamaat | null): HTMLEleme
       createdAt,
       updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveJamaat(db, input, current === null),
+    save: (input) => saveJamaat(db, input, current === null, current?.updatedAt),
   });
 }
 
@@ -200,6 +202,6 @@ function memberForm(ctx: ViewContext, db: Db, jamaat: Jamaat, current: Member | 
       createdAt,
       updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveMember(db, input, current === null),
+    save: (input) => saveMember(db, input, current === null, current?.updatedAt),
   });
 }

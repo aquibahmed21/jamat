@@ -5,6 +5,8 @@ import type { ValidationIssue } from "../model/validate.ts";
 /** Anything that can show a validation message. */
 export interface Errorable {
   root: HTMLElement;
+  /** Moves keyboard focus to the control (used to land on the first invalid field). */
+  focus(): void;
   /** Show (or clear, with null) a validation message tied to the control. */
   setError(message: string | null): void;
 }
@@ -23,6 +25,7 @@ export interface FieldOptions {
   hint?: string;
   value?: string;
   multiline?: boolean;
+  inputMode?: "decimal" | "numeric" | "tel" | "text";
 }
 
 export interface Option {
@@ -48,6 +51,7 @@ function messageBox(id: string): HTMLElement {
 }
 
 function wrap(control: Control, id: string, opts: { label: string; required?: boolean; hint?: string }): Field {
+  if (opts.required) control.setAttribute("aria-required", "true");
   const label = el("label", { attrs: { for: id } }, opts.label, requiredMark(opts.required));
   const hint = opts.hint ? el("div", { class: "hint", text: opts.hint, attrs: { id: `${id}-hint` } }) : null;
   const error = messageBox(id);
@@ -61,6 +65,7 @@ function wrap(control: Control, id: string, opts: { label: string; required?: bo
   return {
     root,
     input: control,
+    focus: () => control.focus(),
     setError(message) {
       error.hidden = message === null;
       error.textContent = message ?? "";
@@ -75,9 +80,11 @@ function wrap(control: Control, id: string, opts: { label: string; required?: bo
 export function field(opts: FieldOptions): Field {
   const id = uid("f");
   const named: Record<string, string> = opts.name ? { name: opts.name } : {};
+  // The data is about other people, so never let the browser autofill the user's own details into it.
+  const common = { id, autocomplete: "off", ...named };
   const control: Control = opts.multiline
-    ? el("textarea", { class: "input", attrs: { id, rows: "3", ...named } })
-    : el("input", { class: "input", attrs: { id, type: opts.type ?? "text", ...named } });
+    ? el("textarea", { class: "input", attrs: { rows: "3", ...common } })
+    : el("input", { class: "input", attrs: { type: opts.type ?? "text", ...(opts.inputMode ? { inputmode: opts.inputMode } : {}), ...common } });
   if (opts.value !== undefined) control.value = opts.value;
   return wrap(control, id, opts);
 }
@@ -118,6 +125,7 @@ export function checkGroup(opts: { label: string; options: readonly Option[]; se
   );
   return {
     root,
+    focus: () => boxes[0]?.input.focus(),
     values: () => boxes.filter((b) => b.input.checked).map((b) => b.input.value),
     setError(message) {
       error.hidden = message === null;
@@ -149,14 +157,18 @@ export function formMessage(): { root: HTMLElement; set(message: string | null):
   };
 }
 
-/** Shows validation issues on their fields (first issue per field); others go to the form message. */
+/**
+ * Shows validation issues on their fields (first issue per field); others go to the form message.
+ * Returns the first field that now shows an error, so the caller can move focus to it.
+ */
 export function applyIssues(
   fields: Record<string, Errorable>,
   issues: readonly ValidationIssue[],
   message: { set(m: string | null): void },
-): void {
+): Errorable | null {
   const t = gt().errors.validation;
   const seen = new Set<string>();
+  let first: Errorable | null = null;
   for (const f of Object.values(fields)) f.setError(null);
   message.set(null);
   for (const i of issues) {
@@ -164,8 +176,10 @@ export function applyIssues(
     if (target && !seen.has(i.field)) {
       target.setError(t[i.code]);
       seen.add(i.field);
+      first ??= target;
     } else if (!target) {
       message.set(t[i.code]);
     }
   }
+  return first;
 }

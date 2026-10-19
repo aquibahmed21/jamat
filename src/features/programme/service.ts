@@ -10,7 +10,7 @@ export async function loadProgramme(db: Db, jamaatId: string) {
   return { items: sortActivities(l.items), malformed: l.malformed };
 }
 
-export async function saveActivity(db: Db, input: unknown, isNew: boolean): Promise<Result<ProgrammeActivity>> {
+export async function saveActivity(db: Db, input: unknown, isNew: boolean, expectedUpdatedAt?: number): Promise<Result<ProgrammeActivity>> {
   const v = validateActivity(input);
   if (!v.ok) return v;
   const jamaat = await db.jamaats.get(v.value.jamaatId);
@@ -20,7 +20,7 @@ export async function saveActivity(db: Db, input: unknown, isNew: boolean): Prom
     return { ok: false, issues: [{ field: "responsibleIds", code: "notAMember" }] };
   }
   if (isNew) await db.activities.add(v.value);
-  else await db.activities.update(v.value);
+  else await db.activities.update(v.value, expectedUpdatedAt);
   return v;
 }
 

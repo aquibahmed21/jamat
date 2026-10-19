@@ -1,10 +1,5 @@
-import type { Expense, ExpenseCategory, Member } from "../model/types.ts";
+import { TRANSFER_CATEGORIES, type Expense, type ExpenseCategory, type Member } from "../model/types.ts";
 import type { ValidationIssue } from "../model/validate.ts";
-
-/** Money-movement records between members / the Jamaat fund (as opposed to costs split among members). */
-export const TRANSFER_CATEGORIES: readonly ExpenseCategory[] = [
-  "contribution", "advance", "reimbursement", "settlement", "refund",
-];
 
 export const isTransfer = (c: ExpenseCategory): boolean => TRANSFER_CATEGORIES.includes(c);
 

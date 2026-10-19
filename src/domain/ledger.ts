@@ -1,4 +1,4 @@
-import type { Expense, Member } from "../model/types.ts";
+import { TRANSFER_CATEGORIES, type Expense, type Member } from "../model/types.ts";
 import { allocateExpense, isAllocatable } from "./allocation.ts";
 
 // Ledger: balances and consistency rules derived from the expense records (nothing is stored here).
@@ -34,8 +34,7 @@ export interface Problem {
 }
 
 const acct = (id: string | null) => id ?? FUND;
-const TRANSFER_FAMILY = ["contribution", "advance", "refund", "reimbursement", "settlement"] as const;
-const isTransferRecord = (e: Expense) => (TRANSFER_FAMILY as readonly string[]).includes(e.category);
+const isTransferRecord = (e: Expense) => TRANSFER_CATEGORIES.includes(e.category);
 
 /** Date, then creation time, then id: a total order. */
 export function chronological(a: Expense, b: Expense): number {

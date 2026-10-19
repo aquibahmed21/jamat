@@ -1,5 +1,6 @@
 import type { AmeerAppointment, AppointmentKind, Jamaat, Member } from "../model/types.ts";
 import type { ValidationIssue } from "../model/validate.ts";
+import { periodIssues } from "./periods.ts";
 
 // Ameer rules
 // 1. An appointment is in effect over the half-open interval [startAt, endAt); endAt === null is open-ended.
@@ -79,11 +80,7 @@ export function appointmentConflicts(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   if (!members.some((m) => m.id === a.memberId)) issues.push({ field: "memberId", code: "notAMember" });
-  if (a.startAt < jamaat.startAt) issues.push({ field: "startAt", code: "beforeJamaatStart" });
-  if (jamaat.endAt !== null) {
-    if (a.startAt >= jamaat.endAt) issues.push({ field: "startAt", code: "afterJamaatEnd" });
-    if (a.endAt !== null && a.endAt > jamaat.endAt) issues.push({ field: "endAt", code: "afterJamaatEnd" });
-  }
+  issues.push(...periodIssues("startAt", a.startAt, "endAt", a.endAt, jamaat));
   if (others.some((o) => o.kind === a.kind && periodsOverlap(o, a))) issues.push({ field: "startAt", code: "overlap" });
   return issues;
 }

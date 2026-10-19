@@ -69,11 +69,22 @@ export class Repo<T extends { id: string }> {
     return v;
   }
 
-  /** Replaces an existing record; fails if it does not exist. */
-  async update(input: unknown): Promise<T> {
+  /**
+   * Replaces an existing record; fails if it does not exist. When `expectedUpdatedAt` is given the stored record must
+   * still carry that timestamp, otherwise another tab/device changed it meanwhile (DbError "conflict"): no silent overwrite.
+   */
+  async update(input: unknown, expectedUpdatedAt?: number): Promise<T> {
     const v = this.checked(input);
+    if (expectedUpdatedAt !== undefined) await this.assertUnchanged(v.id, expectedUpdatedAt);
     await this.backend.replace(this.def.name, v);
     return v;
+  }
+
+  /** Throws "notFound" / "conflict" unless the stored record exists and still has `expectedUpdatedAt`. */
+  async assertUnchanged(id: string, expectedUpdatedAt: number): Promise<void> {
+    const raw = (await this.backend.get(this.def.name, id)) as { updatedAt?: unknown } | undefined;
+    if (raw === undefined) throw new DbError("notFound", { store: this.def.name, id });
+    if (raw.updatedAt !== expectedUpdatedAt) throw new DbError("conflict", { store: this.def.name, id });
   }
 
   /** Validated operations for Db.batch (atomic multi-record writes). */

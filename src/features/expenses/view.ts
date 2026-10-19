@@ -1,7 +1,7 @@
 import { getDb, type Db } from "../../db/index.ts";
 import { fmt, gt } from "../../guitext.ts";
 import {
-  EXPENSE_CATEGORIES, FOOD_BASES, PAYMENT_SOURCES, TREAT_KINDS,
+  EXPENSE_CATEGORIES, FOOD_BASES, PAYMENT_SOURCES, TRANSPORT_COSTS, TREAT_KINDS, VEHICLE_TYPES,
   type AuditEntry, type Expense, type ExpenseCategory, type Jamaat, type Member,
 } from "../../model/types.ts";
 import { newId } from "../../model/id.ts";
@@ -21,6 +21,8 @@ import { listMembers, loadJamaat } from "../members/service.ts";
 import type { ViewContext } from "../members/view.ts";
 import { advanceRemaining, computeBalances, FUND, findProblems, reimbursable, reimbursementRemaining } from "../../domain/ledger.ts";
 import { deleteExpense, loadAudit, saveExpense } from "./service.ts";
+import { notify } from "../../ui/toast.ts";
+import { finishTable } from "../../ui/table.ts";
 
 const LIST = "#/expenses";
 const money = (paise: number) => formatPaise(paise, gt().currencySymbol);
@@ -68,6 +70,7 @@ async function confirmRemove(db: Db, e: Expense): Promise<boolean> {
   if (!ok) return false;
   try {
     await deleteExpense(db, e.id);
+    notify(gt().common.deleted);
     return true;
   } catch (err) {
     await alertDialog(t.cannotDelete, errorText(err));
@@ -128,6 +131,8 @@ function detail(ctx: ViewContext, db: Db, members: Member[], all: Expense[], e: 
   }
   if (e.foodBasis) rows.push([t.foodBasis, t.foodBases[e.foodBasis]]);
   if (e.treatKind) rows.push([t.treatKind, t.treatKinds[e.treatKind]]);
+  if (e.vehicle) rows.push([t.vehicle, t.vehicles[e.vehicle]]);
+  if (e.transportCost) rows.push([t.transportCost, t.transportCosts[e.transportCost]]);
   if (e.participantIds.length > 0) rows.push([t.participants, e.participantIds.map(name).join(", ")]);
   const lg = gt().ledger;
   const linked = e.linkedExpenseId ? all.find((x) => x.id === e.linkedExpenseId) : undefined;
@@ -162,7 +167,7 @@ function expenseForm(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[]
     date: field({ label: t.date, type: "datetime-local", required: true, value: toInputValue(current?.date ?? Date.now()) }),
     description: field({ label: t.description, required: true, value: current?.description ?? "" }),
     amountPaise: field({
-      label: t.amount, required: true, hint: t.amountHint, value: current ? paiseToInput(current.amountPaise) : "",
+      label: t.amount, required: true, hint: t.amountHint, inputMode: "decimal", value: current ? paiseToInput(current.amountPaise) : "",
     }),
     foodBasis: selectField({
       label: t.foodBasis, required: true, value: current?.foodBasis ?? "meal",
@@ -171,6 +176,14 @@ function expenseForm(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[]
     treatKind: selectField({
       label: t.treatKind, required: true, value: current?.treatKind ?? "personal",
       options: TREAT_KINDS.map((k) => ({ value: k, label: t.treatKinds[k] })),
+    }),
+    vehicle: selectField({
+      label: t.vehicle, value: current?.vehicle ?? "",
+      options: [{ value: "", label: t.notSpecified }, ...VEHICLE_TYPES.map((k) => ({ value: k, label: t.vehicles[k] }))],
+    }),
+    transportCost: selectField({
+      label: t.transportCost, value: current?.transportCost ?? "",
+      options: [{ value: "", label: t.notSpecified }, ...TRANSPORT_COSTS.map((k) => ({ value: k, label: t.transportCosts[k] }))],
     }),
     paymentSource: selectField({
       label: t.source, required: true, value: current?.paymentSource ?? "member",
@@ -232,6 +245,8 @@ function expenseForm(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[]
     fields.periodFrom.root.hidden = !(food && fields.foodBasis.input.value === "duration");
     fields.periodTo.root.hidden = fields.periodFrom.root.hidden;
     fields.treatKind.root.hidden = cat !== "treat";
+    fields.vehicle.root.hidden = cat !== "transport";
+    fields.transportCost.root.hidden = cat !== "transport";
     fields.counterpartyId.root.hidden = !transfer;
     fields.participantIds.root.hidden = transfer;
     const linked = cat === "refund" || cat === "reimbursement";
@@ -267,12 +282,14 @@ function expenseForm(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[]
       participantIds: shown(fields.participantIds) ? fields.participantIds.values() : [],
       foodBasis: shown(fields.foodBasis) ? fields.foodBasis.input.value : null,
       treatKind: shown(fields.treatKind) ? fields.treatKind.input.value : null,
+      vehicle: shown(fields.vehicle) ? fields.vehicle.input.value || null : null,
+      transportCost: shown(fields.transportCost) ? fields.transportCost.input.value || null : null,
       mealTimes: shown(fields.mealTimes) ? fields.mealTimes.values() : [],
       periodFrom: shown(fields.periodFrom) ? fromInputValue(fields.periodFrom.input.value) : null,
       periodTo: shown(fields.periodTo) ? fromInputValue(fields.periodTo.input.value) : null,
       createdAt, updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveExpense(db, input, current === null),
+    save: (input) => saveExpense(db, input, current === null, current?.updatedAt),
   });
 }
 
@@ -301,6 +318,7 @@ function breakdown(e: Expense, members: readonly Member[]): HTMLElement {
     ))),
     el("tfoot", {}, el("tr", {}, cell("th", t.total), cell("td", ""), cell("td", ""), cell("td", money(result.totalPaise), "num"), cell("td", ""))),
   );
+  finishTable(table, t.title);
   return el("section", { class: "stack" },
     head,
     el("p", { class: "muted small", text: `${t.method[result.method]} · ${t.paidBy}: ${name(result.payerId)}` }),
@@ -348,6 +366,11 @@ function balances(ctx: ViewContext, members: Member[], expenses: Expense[]): HTM
     el("tr", {}, cell("td", name), cell("td", money(n), "num"), cell("td", state(n)));
   const total = [...bal.values()].reduce((a, b) => a + b, 0);
   const rows = [...members.map((m) => row(m.name, bal.get(m.id) ?? 0)), row(lg.fund, bal.get(FUND) ?? 0)];
+  const table = finishTable(el("table", { class: "table" },
+    el("thead", {}, el("tr", {}, cell("th", lg.member), cell("th", lg.balance, "num"), cell("th", lg.status))),
+    el("tbody", {}, ...rows),
+    el("tfoot", {}, el("tr", {}, cell("th", lg.total), cell("td", money(total), "num"), cell("td", ""))),
+  ), lg.balances);
   return el("div", { class: "stack" },
     el("div", { class: "toolbar" },
       el("h2", { text: lg.balances }),
@@ -355,11 +378,7 @@ function balances(ctx: ViewContext, members: Member[], expenses: Expense[]): HTM
     ),
     members.length === 0
       ? emptyState(lg.noMembers, undefined, "members")
-      : el("div", { class: "scroll" }, el("table", { class: "table" },
-          el("thead", {}, el("tr", {}, cell("th", lg.member), cell("th", lg.balance, "num"), cell("th", ""))),
-          el("tbody", {}, ...rows),
-          el("tfoot", {}, el("tr", {}, cell("th", lg.total), cell("td", money(total), "num"), cell("td", ""))),
-        )),
+      : el("div", { class: "scroll" }, table),
     total === 0 ? el("p", { class: "muted small", text: lg.reconciled }) : null,
     problems.length > 0
       ? el("p", { class: "error-text", text: fmt(lg.problems, { n: new Set(problems.map((p) => p.expenseId)).size }), attrs: { role: "status" } })

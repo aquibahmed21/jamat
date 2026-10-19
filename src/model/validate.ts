@@ -1,5 +1,6 @@
 import {
-  APPOINTMENT_KINDS, AUDIT_ACTIONS, EXPENSE_CATEGORIES, FOOD_BASES, PAYMENT_SOURCES, PLACE_TYPES, TREAT_KINDS,
+  APPOINTMENT_KINDS, AUDIT_ACTIONS, EXPENSE_CATEGORIES, FOOD_BASES, MAX_AMOUNT_PAISE, PAYMENT_SOURCES, PLACE_TYPES,
+  TRANSFER_CATEGORIES, TRANSPORT_COSTS, TREAT_KINDS, VEHICLE_TYPES,
   type Allocation, type AmeerAppointment, type AuditEntry, type Expense, type Jamaat, type Member, type Mulaqaat,
   type Place, type ProgrammeActivity, type Stamps,
 } from "./types.ts";
@@ -10,6 +11,7 @@ export const VALIDATION_CODES = [
   "beforeJamaatStart", "afterJamaatEnd", "duplicateName", "conflictsWithMembers",
   "notAMember", "overlap", "duplicateExpense", "samePartyTransfer", "notEligible",
   "linkInvalid", "overRefund", "overReimburse", "overSettle", "ledgerConflict", "duplicatePlace",
+  "conflictsWithRecords",
 ] as const;
 export type ValidationCode = (typeof VALIDATION_CODES)[number];
 
@@ -117,10 +119,11 @@ class Reader {
     return v as Record<string, unknown>;
   }
 
-  idList(key: string): string[] {
+  idList(key: string, max = 500): string[] {
     const v = this.raw(key);
     if (v === null) return [];
     if (!Array.isArray(v)) { this.fail(key, "invalidType"); return []; }
+    if (v.length > max) { this.fail(key, "tooLong"); return []; }
     const out: string[] = [];
     for (const item of v) {
       if (typeof item !== "string" || !ID_RE.test(item)) { this.fail(key, "invalidId"); return []; }
@@ -224,7 +227,7 @@ export function validateExpense(input: unknown): Result<Expense> {
     category: r.oneOf("category", EXPENSE_CATEGORIES),
     date: r.ts("date"),
     description: r.text("description", 500, true),
-    amountPaise: r.int("amountPaise", 1, Number.MAX_SAFE_INTEGER),
+    amountPaise: r.int("amountPaise", 1, MAX_AMOUNT_PAISE),
     paymentSource: r.oneOf("paymentSource", PAYMENT_SOURCES),
     payerId: r.optId("payerId"),
     counterpartyId: r.optId("counterpartyId"),
@@ -232,14 +235,18 @@ export function validateExpense(input: unknown): Result<Expense> {
     participantIds: r.idList("participantIds"),
     foodBasis: r.optOneOf("foodBasis", FOOD_BASES),
     treatKind: r.optOneOf("treatKind", TREAT_KINDS),
+    vehicle: r.optOneOf("vehicle", VEHICLE_TYPES),
+    transportCost: r.optOneOf("transportCost", TRANSPORT_COSTS),
     mealTimes: r.tsList("mealTimes", 100),
     periodFrom: r.optTs("periodFrom"),
     periodTo: r.optTs("periodTo"),
     ...r.stamps(),
   };
   r.cross(() => {
-    const transfer = v.category === "contribution" || v.category === "advance" || v.category === "reimbursement" ||
-      v.category === "settlement" || v.category === "refund";
+    const transfer = TRANSFER_CATEGORIES.includes(v.category);
+    if (v.category !== "transport" && (v.vehicle !== null || v.transportCost !== null)) {
+      r.fail(v.vehicle !== null ? "vehicle" : "transportCost", "invalidCombo");
+    }
     if (!transfer && v.counterpartyId !== null) r.fail("counterpartyId", "invalidCombo");
     if (transfer && v.participantIds.length > 0) r.fail("participantIds", "invalidCombo");
     if ((v.category === "contribution" || v.category === "advance" || v.category === "settlement") && v.paymentSource !== "member") {

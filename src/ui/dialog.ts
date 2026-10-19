@@ -15,6 +15,7 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
     const t = gt().common;
     const titleId = uid("dlg-title");
+    const textId = uid("dlg-text");
     let result = false;
     const cancel = button({ label: t.cancel, onClick: () => dlg.close() });
     const ok = button({
@@ -25,9 +26,9 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
     cancel.autofocus = !!opts.destructive;
     ok.autofocus = !opts.destructive;
 
-    const dlg = el("dialog", { class: "dialog", attrs: { "aria-labelledby": titleId } },
+    const dlg = el("dialog", { class: "dialog", attrs: { "aria-labelledby": titleId, ...(opts.message ? { "aria-describedby": textId } : {}) } },
       el("h2", { text: opts.title, attrs: { id: titleId } }),
-      opts.message ? el("p", { text: opts.message }) : null,
+      opts.message ? el("p", { text: opts.message, attrs: { id: textId } }) : null,
       el("div", { class: "actions" }, cancel, ok),
     );
     dlg.addEventListener("click", (ev) => { if (ev.target === dlg) dlg.close(); });
@@ -41,9 +42,10 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
 export function alertDialog(title: string, message?: string): Promise<void> {
   return new Promise((resolve) => {
     const titleId = uid("dlg-title");
-    const dlg = el("dialog", { class: "dialog", attrs: { "aria-labelledby": titleId } },
+    const textId = uid("dlg-text");
+    const dlg = el("dialog", { class: "dialog", attrs: { "aria-labelledby": titleId, ...(message ? { "aria-describedby": textId } : {}) } },
       el("h2", { text: title, attrs: { id: titleId } }),
-      message ? el("p", { text: message }) : null,
+      message ? el("p", { text: message, attrs: { id: textId } }) : null,
       el("div", { class: "actions" }, button({ label: gt().common.ok, variant: "primary", onClick: () => dlg.close() })),
     );
     dlg.addEventListener("close", () => { dlg.remove(); resolve(); });

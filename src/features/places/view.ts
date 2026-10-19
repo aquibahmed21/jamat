@@ -15,6 +15,7 @@ import { emptyState } from "../../ui/states.ts";
 import { listMembers, loadJamaat } from "../members/service.ts";
 import type { ViewContext } from "../members/view.ts";
 import { deleteMulaqaat, deletePlace, loadMulaqaat, loadPlaces, savePlace, saveMulaqaat } from "./service.ts";
+import { notify } from "../../ui/toast.ts";
 
 const LIST = "#/places";
 const MEET = "#/places/mulaqaat";
@@ -69,7 +70,7 @@ function placeList(ctx: ViewContext, db: Db, places: Place[]): HTMLElement {
       title: t.deleteTitle, message: fmt(t.deleteText, { name: p.name }), confirmLabel: c.delete, destructive: true,
     });
     if (!ok) return;
-    try { await deletePlace(db, p.id); } catch (e) { await alertDialog(t.cannotDelete, errorText(e)); }
+    try { await deletePlace(db, p.id); notify(c.deleted); } catch (e) { await alertDialog(t.cannotDelete, errorText(e)); }
     ctx.refresh();
   };
 
@@ -148,7 +149,7 @@ function placeForm(ctx: ViewContext, db: Db, current: Place | null): HTMLElement
       notes: fields.notes.input.value,
       createdAt, updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => savePlace(db, input, current === null),
+    save: (input) => savePlace(db, input, current === null, current?.updatedAt),
   });
 }
 
@@ -163,7 +164,7 @@ function meetingList(ctx: ViewContext, db: Db, members: Member[], places: Place[
       title: t.mDeleteTitle, message: fmt(t.mDeleteText, { place: placeName(m.placeId) }), confirmLabel: c.delete, destructive: true,
     });
     if (!ok) return;
-    try { await deleteMulaqaat(db, m.id); } catch (e) { await alertDialog(t.cannotDelete, errorText(e)); }
+    try { await deleteMulaqaat(db, m.id); notify(c.deleted); } catch (e) { await alertDialog(t.cannotDelete, errorText(e)); }
     ctx.refresh();
   };
 
@@ -218,6 +219,6 @@ function meetingForm(
       notes: fields.notes.input.value,
       createdAt, updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveMulaqaat(db, input, current === null),
+    save: (input) => saveMulaqaat(db, input, current === null, current?.updatedAt),
   });
 }

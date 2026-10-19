@@ -37,8 +37,8 @@ run.** I will ask you to complete tasks individually, for example:
     Avoid unnecessary abstractions, dependencies, and overengineering.
 9.  Centralize all user-facing UI text in `src/guitext.ts`. Do not
     hard-code interface text in HTML, TypeScript, CSS-generated content,
-    alerts, dialogs, or error messages. Support English and concise
-    Roman English.
+    alerts, dialogs, or error messages. Support English, concise Roman
+    English and Urdu (see E5).
 10. Use only HTML, CSS, TypeScript, and native browser APIs. Do not add
     third-party runtime libraries, frameworks, CDNs, or a backend.
 11. Store persistent application data in IndexedDB. Support offline use
@@ -78,8 +78,8 @@ places.
 -   Backup/restore: JSON export, validation, and restore, with clear
     data-loss warnings.
 -   Responsive support: phones, tablets, iPads, laptops, and desktops.
--   Centralized interface text: `src/guitext.ts`, with English and
-    concise Roman English.
+-   Centralized interface text: `src/guitext.ts`, with English, concise
+    Roman English and Urdu (right-to-left; see E5).
 -   Priorities: correctness, reliable accounting, data safety,
     usability, simplicity, and maintainability.
 
@@ -148,6 +148,320 @@ invalid allocations, and inconsistent settlements.
 -   Review security, data integrity, edge cases, performance, and
     complexity.
 -   Never silently delete or overwrite user data.
+
+------------------------------------------------------------------------
+
+# Engineering requirements
+
+These requirements apply to every task, including the follow-up tasks
+at the end of the plan. Where they are stricter than the sections
+above, follow the stricter rule.
+
+## E1. Technology and deployment
+
+-   Use TypeScript, HTML5 and plain CSS3.
+-   Host the application on GitHub Pages.
+-   Use native browser APIs, including IndexedDB, Service Worker, Web
+    Components only if genuinely useful, and native drag-and-drop or
+    pointer events.
+-   Do not use third-party runtime libraries, UI frameworks, CSS
+    frameworks, icon packages, database wrappers or external JavaScript
+    dependencies.
+-   Use the TypeScript compiler (`tsc`) as a development/build tool.
+    Compile TypeScript into browser-compatible JavaScript before
+    deployment.
+-   No backend or cloud database in the initial release.
+-   Store all Jamaat data locally using IndexedDB.
+-   Support offline use after the application has been loaded and cached
+    successfully.
+-   Use relative paths or a configurable base path so the app works on
+    GitHub Pages project URLs as well as custom domains.
+-   Keep the production output static and suitable for GitHub Pages.
+
+## E2. Performance and optimisation
+
+-   Load only the code required for the current screen where practical.
+-   Avoid unnecessary DOM updates and repeated full-page rendering.
+-   Cache frequently accessed records in memory only when beneficial.
+-   Use IndexedDB indexes for common queries, such as members by Jamaat,
+    activities by date and expenses by category.
+-   Avoid expensive calculations during typing or dragging.
+-   Recalculate expense allocations only when relevant inputs change.
+-   Use event delegation where it simplifies repeated event handling.
+-   Avoid unnecessary timers, polling and background processing.
+-   Keep CSS selectors simple and avoid layout-heavy animations.
+-   Do not introduce optimisation complexity without evidence that it is
+    needed.
+-   Test performance on ordinary mobile devices, not just desktop
+    browsers.
+
+## E3. DRY --- Don't Repeat Yourself
+
+-   Keep one reusable function for each shared operation.
+-   Use common functions for rendering buttons, forms, dialogs,
+    validation messages and status indicators.
+-   Keep currency formatting and date/time formatting in shared
+    utilities.
+-   Use one expense calculation engine for all expense screens and
+    reports.
+-   Store programme activity types and their labels in a central
+    configuration.
+-   Keep English and Roman English translations in one central language
+    file.
+-   Use shared CSS variables for colours, spacing, typography and
+    control sizes.
+-   Reuse programme templates rather than duplicating the same daily
+    timetable.
+-   Avoid duplicate business logic between the dashboard, reports and
+    member statements.
+-   Do not create abstractions merely to avoid a few simple lines of
+    code. Prefer clear, straightforward code.
+
+## E4. Simple, readable TypeScript
+
+-   Use descriptive names such as `jamaat`, `member`, `activity`,
+    `expense` and `arrivalTime`.
+-   Avoid cryptic names, unnecessary abbreviations, deeply nested
+    conditions and oversized functions.
+-   Keep functions focused on one task.
+-   Prefer straightforward control flow over clever one-liners.
+-   Define TypeScript interfaces or types for core entities and
+    important function inputs/outputs.
+-   Enable strict TypeScript checking.
+-   Avoid `any`; use explicit types and `unknown` where appropriate.
+-   Avoid unnecessary inheritance, dependency injection frameworks,
+    factories and complex design patterns.
+-   Keep modules organised by actual feature boundaries.
+-   Add comments to explain important business rules, not to narrate
+    obvious code.
+-   Do not duplicate data that can be derived safely from the source
+    records.
+
+## E5. Language support: English, Roman English and Urdu
+
+Support exactly three interface languages:
+
+1.  English
+2.  Roman English --- English words written in a familiar transliterated
+    style used by the intended users.
+3.  Urdu --- written in Urdu (Arabic) script and laid out right-to-left
+    (RTL).
+
+Reference translations (use these exact forms wherever the English term
+appears, and keep other labels in the same style). The Urdu forms are
+the proposed standard and must be reviewed by a native reader before
+release:
+
+  English              Roman English           Urdu
+  -------------------- ----------------------- ----------------
+  Daily Programme      Rozana Kaam             روزانہ کام
+  Morning Taleem       Subah Ki Taleem         صبح کی تعلیم
+  Breakfast            Nashta                  ناشتہ
+  Lunch                Dopahar Ka Khana        دوپہر کا کھانا
+  Rest                 Aaram                   آرام
+  Mulaqaat             Mulaqaat                ملاقات
+  Responsible Person   Zimmedar                ذمہ دار
+  Temporary Ameer      Aarzi Ameer             عارضی امیر
+  Expense              Kharcha                 خرچہ
+  Add Member           Member Shamil Karein    ممبر شامل کریں
+  Save                 Save Karein             محفوظ کریں
+  Cancel               Cancel Karein           منسوخ کریں
+
+General requirements (all languages):
+
+-   Create a central translation file for all user-facing text.
+-   Never hard-code interface text inside feature modules.
+-   Keep translations concise and consistent.
+-   Support changing the language without losing data or resetting the
+    current screen.
+-   Persist the selected language locally.
+-   Use the same translation keys for buttons, labels, dialogs,
+    validation errors and reports.
+-   Do not translate user-entered names, addresses or personal notes
+    automatically.
+-   Use English as the fallback when a translation is missing.
+-   The language selector offers all three languages, each shown in its
+    own script (English, Roman English, اردو).
+
+Urdu and right-to-left requirements:
+
+-   Set `lang="ur"` and `dir="rtl"` on the document (and `lang`/`dir`
+    attributes on any mixed-direction fragment) whenever Urdu is
+    selected; English and Roman English use `lang` `en`/`ur-Latn` and
+    `dir="ltr"`. Switching language changes direction without a reload
+    and without losing the current screen or unsaved input.
+-   Build layouts with CSS logical properties (`margin-inline`,
+    `padding-inline`, `inset-inline`, `text-align: start`, logical
+    borders and radii) and flex/grid flow instead of hard-coded
+    left/right, so one stylesheet serves both directions. Mirror
+    direction-dependent visuals (arrows, back/forward, progress, drag
+    handles, bottom-bar order, side navigation, toasts, dialogs); keep
+    non-directional icons (home, delete, check) unmirrored.
+-   Fonts: use a system font stack with a good Urdu fallback (prefer a
+    Nastaliq-capable system font where available, otherwise a readable
+    Naskh); no web fonts, no CDNs. Use generous line height for Urdu
+    text and verify nothing is clipped.
+-   Bidirectional content: user-entered names, addresses, phone numbers,
+    amounts, dates and times can mix scripts. Isolate them with `<bdi>`
+    or `dir="auto"` so punctuation, numbers and Latin text do not
+    reorder surrounding Urdu text; keep phone numbers and amounts
+    readable left-to-right.
+-   Numbers, dates and currency: format through the shared utilities
+    using the Intl API with a locale per language (Urdu locale for
+    month/day names and grouping). Use one documented digit style
+    (default: Western digits 0-9, as on the keypad and in money
+    fields); input fields accept Western digits and normalise Eastern
+    Arabic/Urdu digits typed by the user. Money stays integer paise.
+-   Sorting and search of names should use locale-aware comparison for
+    the active language.
+-   Roman English and Urdu are separate languages with separate text;
+    do not machine-transliterate between them at runtime.
+-   Tests and checks: every translation key exists in all three
+    languages (compile-time) with the English runtime fallback; the UI
+    audit (`npm run audit:ui`) also runs in Urdu/RTL (no horizontal
+    overflow, no clipped text, tap targets, contrast, focus order
+    following RTL reading order); unit tests cover bidi-safe formatting
+    of mixed content, digit normalisation, and direction switching.
+
+## E6. Reorderable daily timetable
+
+Every day's programme must support reordering activities.
+
+-   Allow users to move an activity up or down.
+-   Support drag-and-drop on devices that provide a suitable pointer or
+    touch interaction.
+-   Provide accessible Move Up and Move Down controls as an alternative
+    to dragging.
+-   Store the activity's explicit order in IndexedDB.
+-   Preserve the order after refresh, restart and offline use.
+-   Allow activities to have start and end times independently of their
+    display order.
+-   Warn about chronological inconsistencies without automatically
+    rearranging the user's chosen order.
+-   Warn when a member has overlapping responsibilities.
+-   Allow users to copy, edit and reuse daily programme templates.
+-   Do not overwrite a customised day when applying a template without
+    confirmation.
+
+The display order and scheduled time are separate fields. This allows
+users to arrange the programme in the order they want while still seeing
+timing conflicts.
+
+## E7. Temporary Ameer
+
+Support both a permanent Ameer and a temporary Ameer.
+
+-   Select the permanent Ameer from the Jamaat's members.
+-   Allow an authorised user to appoint a temporary Ameer.
+-   Record the temporary Ameer, start date/time, end date/time and
+    optional reason.
+-   Allow a temporary appointment to be ended early.
+-   Show clearly who is currently responsible.
+-   Display scheduled future appointments when relevant.
+-   Preserve the history of all appointments and changes.
+-   Prevent invalid overlapping temporary appointments unless explicitly
+    supported by a documented rule.
+-   Do not overwrite the permanent Ameer when appointing a temporary
+    one.
+-   Restore the permanent Ameer automatically when the temporary
+    appointment ends.
+-   Handle temporary appointments that cross midnight or the end of a
+    scheduled day.
+-   Allow a temporary Ameer to be changed without altering expense
+    records or programme assignments.
+
+The permanent Ameer and temporary appointment must be stored
+separately. The current effective Ameer should be derived from the
+permanent appointment and the active temporary appointment, rather than
+duplicated across multiple records.
+
+## E8. Local data integrity
+
+-   Use IndexedDB for structured data and transactions.
+-   Store monetary values as integer paise.
+-   Validate records before saving.
+-   Use stable IDs for Jamaats, members, activities, places, expenses
+    and appointments.
+-   Preserve financial history when correcting posted expenses.
+-   Provide complete JSON backup and restore.
+-   Validate imported backups before changing existing data.
+-   Version the local database schema and provide migrations.
+-   Never silently discard existing records during a schema update.
+-   Clearly explain that device-local data does not automatically
+    synchronise between devices.
+
+## E9. Avoid overengineering
+
+-   Build only the modules required by the agreed requirements.
+-   Prefer a small number of clear modules over a complicated
+    architecture.
+-   Do not add a backend, user account system, cloud synchronisation or
+    third-party services in the first release.
+-   Do not introduce state-management libraries, routing libraries, form
+    libraries or component libraries.
+-   Use a simple application router only if multiple screens require it.
+-   Avoid speculative features and premature performance optimisation.
+-   Do not create multiple layers that merely pass data through
+    unchanged.
+-   Keep the calculation engine separate because financial correctness
+    and testing genuinely require that separation.
+
+## E10. Quality gates
+
+Before considering a feature complete:
+
+-   TypeScript compiles without errors.
+-   No new TypeScript `any` types are introduced without explicit
+    justification.
+-   Existing data survives refresh and browser restart.
+-   The feature works offline where its functionality does not require
+    an external service.
+-   English and Roman English both work.
+-   The interface works on mobile, tablet and desktop.
+-   The relevant calculation and validation tests pass.
+-   No third-party runtime dependencies are added.
+-   The code remains readable and uses existing shared functions instead
+    of duplicating logic.
+-   GitHub Pages deployment works under the actual published URL.
+-   Existing features are not removed or broken by the change.
+
+## E11. Recommended project structure
+
+Keep the structure small and feature-oriented:
+
+-   `index.html` --- application entry point
+-   `css/` --- reset, shared styles, layout and responsive styles
+-   `src/app.ts` --- application initialisation
+-   `src/types.ts` --- core data types
+-   `src/database.ts` --- IndexedDB operations
+-   `src/i18n.ts` --- language selection and translation
+-   `src/utils/` --- dates, currency and common utilities
+-   `src/features/jamaat.ts` --- Jamaat and Ameer management
+-   `src/features/members.ts` --- members and attendance
+-   `src/features/programme.ts` --- daily timetable and assignments
+-   `src/features/places.ts` --- destinations and local contacts
+-   `src/features/mulaqaat.ts` --- visit planning and follow-up
+-   `src/features/expenses.ts` --- expense entry and ledger
+-   `src/features/calculations.ts` --- expense allocation engine
+-   `src/features/backup.ts` --- backup and restore
+-   `public/sw.js` --- offline application caching
+-   `public/manifest.json` --- PWA metadata
+-   `tests/` --- calculation, storage and workflow tests
+
+Adjust the structure if the actual implementation proves that fewer
+files would be clearer. Do not create empty modules or unnecessary
+abstractions simply to match this list. (The current repository layout
+--- `src/model`, `src/domain`, `src/db`, `src/features/<module>`,
+`src/ui`, `src/backup`, generated `manifest.webmanifest`, `src/sw.ts` ---
+is an accepted adjustment and is documented in `README.md`; do not
+reorganise it merely to match this list.)
+
+## Final engineering principle
+
+Build the simplest application that correctly satisfies the
+requirements. Prioritise correctness, readable TypeScript, local data
+safety, fast interaction and ease of future maintenance over
+architectural complexity.
 
 ------------------------------------------------------------------------
 
@@ -422,11 +736,306 @@ grows.
 
 ------------------------------------------------------------------------
 
+# Follow-up tasks (conformance with the engineering requirements)
+
+Tasks 1--17 are implemented (see `README.md` and `docs/AUDIT.md`). The
+tasks below close the gaps found when the implementation was reviewed
+against the Engineering requirements (E1--E11). The same rules apply:
+one task per explicit request, stop after each task, report per rule 13.
+
+## Recommended order
+
+Implement the follow-up tasks in numeric order. The order is deliberate:
+
+1.  **Task 18 (languages: Roman English alignment and Urdu text)** first:
+    it changes text and the language-switch behaviour (and adds the
+    third language and direction switching), and settles *how screens
+    re-render* before more screens are built or restyled.
+2.  **Task 19 (UI revamp)** next and **before** any new screens: it
+    defines the design system (tokens, glass surfaces, components) that
+    Tasks 20 and 21 will reuse, and makes it right-to-left ready (logical
+    CSS properties, mirrored icons) so Urdu looks right from the start.
+    Building their forms and views first would mean restyling them
+    twice.
+3.  **Task 20 (per-day programme and templates)** is the largest UI-facing
+    data change (migration v3); build it on the new design system.
+4.  **Task 21 (Ameer completion, mulaqaat planning, member statement,
+    Ameer-at-date lookup)** adds smaller features on the settled design
+    system.
+5.  **Task 22 (attendance with temporary absences)** changes the
+    eligibility and allocation engine and the member data shape (another
+    migration); do it before the integrity task so Task 23 and the
+    statement view are verified against the final presence model.
+6.  **Task 23 (data-integrity follow-ups)** closes the remaining
+    accounting and consistency gaps (near-duplicates, legacy
+    participants, the reserved `allocations` store, transactional
+    concurrency checks) once the data model has stopped changing.
+7.  **Task 24 (performance)** after the screens, the heavier glass-effect
+    styling and the data model are final: lazy loading, delegation and
+    measurements only make sense then. It also checks that the Task 19
+    visuals stay smooth on ordinary phones.
+8.  **Task 25 (release readiness)** last: reproducible build, CI gates,
+    the manual release checklist and the verified deployment.
+
+Each task still needs its own explicit request.
+
+## Known gaps register
+
+Every gap identified in the reviews of the implementation, and where it
+is closed. Update this table when a gap is closed or a new one is found.
+
+  Gap                                                        Closed by
+  ---------------------------------------------------------- ---------------
+  Roman English wording differs from the E5 reference        Task 18
+  No Urdu / right-to-left support                            Task 18, 19
+  Language switch can lose the screen or typed input         Task 18
+  No runtime English fallback for a missing translation      Task 18
+  Locale, language tag and separators hard-coded in code     Task 18
+  Glass UI revamp; RTL-ready layout                          Task 19
+  Programme has no per-day timetable                         Task 20
+  No programme templates (copy, edit, apply with confirm)    Task 20
+  No per-member responsibility-overlap warning               Task 20
+  No activities-by-date index                                Task 20
+  No optional reason on Ameer appointments                   Task 21
+  No "End now" for temporary appointments                    Task 21
+  Mulaqaat is past-only (no planning/follow-up)              Task 21
+  No per-member statement                                    Task 21
+  Ameer shown for "now" only (no lookup at a chosen time)    Task 21
+  Attendance is one join/leave interval (no absences)        Task 22
+  Only exact duplicate expenses are caught                   Task 23
+  Legacy expenses still resolve participants dynamically     Task 23
+  Reserved `allocations` store is never written              Task 23
+  Concurrency check is not inside the write transaction      Task 23
+  Everything loaded up front; no event delegation            Task 24
+  Missing indexes (expenses by category)                     Task 24
+  No measurement on real mobile hardware                     Task 24, 25
+  Build depends on a global `tsc`; no lockfile               Task 25
+  Browser smoke/audit are advisory in CI                     Task 25
+  Manual device checks and translation review not done       Task 25
+  Latest build not yet deployed and verified live            Task 25
+
+Accepted (out of scope unless explicitly requested): encrypted
+backups, user accounts, cloud sync, any backend, and HTTP security
+headers that GitHub Pages cannot set (for example `frame-ancestors`).
+
+## Task 18 --- Languages: Roman English alignment, Urdu and language switching
+
+-   Replace the Roman English wording so every term in the E5 reference
+    table uses exactly the specified form (Rozana Kaam, Subah Ki
+    Taleem, Nashta, Dopahar Ka Khana, Aaram, Zimmedar, Aarzi Ameer,
+    Kharcha, Member Shamil Karein, Save Karein, Cancel Karein), and make
+    the remaining Roman English labels consistent with that style.
+-   Add Urdu (Arabic script) as the third language in `src/guitext.ts`:
+    every key translated, using the E5 reference forms, concise and
+    consistent; extend the language type, selector (each language shown
+    in its own script), persisted preference and tests. Mark the Urdu
+    text for native-reader review in the report.
+-   Add direction handling: set `lang`/`dir` on the document when the
+    language changes (`ur` + `rtl` for Urdu), without a reload.
+-   Add Urdu-aware formatting in the shared utilities: Intl locale per
+    language for dates/numbers, one documented digit style, digit
+    normalisation for input, locale-aware name sorting, and bidi-safe
+    rendering (`<bdi>`/`dir="auto"`) of names, phone numbers and amounts.
+-   Make changing the language preserve the current screen and any
+    unsaved form input: update text in place (or re-render while
+    restoring field values, selection, scroll position and focus)
+    instead of asking the user to discard changes.
+-   Add the runtime English fallback for a missing translation while
+    keeping the compile-time completeness check.
+-   Full right-to-left *layout* polish is finished in Task 19 together
+    with the redesign; in this task make the app usable and
+    non-broken in Urdu (no overflow, no clipped text) with the existing
+    styles.
+-   Close the formatting-literal gap: no locale name, language tag or
+    label separator (for example `": "`, `" · "`) may be hard-coded outside
+    the shared utilities and `src/guitext.ts`; the initial `<html lang>`
+    and direction are set from the saved language before first paint.
+-   Add tests for the reference translations in all three languages, the
+    fallback, direction switching, digit normalisation, bidi-safe
+    formatting, and language switching with a half-filled form.
+
+## Task 19 --- UI revamp with a glassmorphism design system
+
+Goal: a polished, modern, mobile-first look with glassmorphism, without
+sacrificing readability, accessibility, offline use or performance. This
+is a visual and interaction change only: no business rules, data model
+or stored data change, and no feature is removed.
+
+-   **Design tokens first (E3):** extend the shared CSS variables for
+    colour (light and dark), glass surfaces (fill opacity, blur radius,
+    border, shadow), spacing, radius, typography scale, control height,
+    elevation and motion. All components use the tokens; no one-off
+    colours or sizes in component rules.
+-   **Glass surfaces:** translucent fills with `backdrop-filter` blur, a
+    thin light border and soft shadow for the top bar, navigation (bottom
+    bar on phones, side rail on wider screens), cards, dialogs, toasts,
+    the update banner and the skip link; a calm layered background made
+    only from CSS gradients (no images, no fonts or icon packages, no
+    external requests).
+-   **Hierarchy and polish:** clear visual hierarchy on every screen
+    (Home summary cards, lists, detail views, forms, tables, empty,
+    loading and error states), consistent icon size and stroke, refined
+    buttons (primary, secondary, danger, icon-only), inputs, selects,
+    checkboxes, badges and chips, with restrained, short transitions.
+-   **Accessibility is not negotiable:** text on glass must still meet
+    WCAG AA contrast measured against the *worst* background behind it;
+    use a more opaque fill for text-heavy surfaces if needed. Keep
+    visible focus rings, 44 px touch targets, and the existing keyboard
+    behaviour. Provide fallbacks: a solid, opaque surface when
+    `backdrop-filter` is unsupported (`@supports`), under
+    `prefers-reduced-transparency`, `forced-colors`, and a reduced-motion
+    variant of every animation.
+-   **Performance guardrails (E2):** limit the number of simultaneously
+    blurred layers (blur container surfaces, not every list row), avoid
+    layout-heavy animations, keep blur radii modest, and verify scrolling
+    and interaction stay smooth with a throttled CPU profile; drop or
+    reduce blur on low-end conditions if the measurement requires it.
+-   **Responsive:** verify phones (including 320 px), tablets, iPad,
+    laptop and desktop layouts, light and dark mode, and all three
+    languages.
+-   **Right-to-left ready (E5):** write every new rule with CSS logical
+    properties, mirror directional icons and glass edge highlights/shadows
+    for RTL, keep the gradient background direction-neutral, and make the
+    bottom bar, side rail, dialogs, toasts and form layouts correct in
+    Urdu; run `npm run audit:ui` in Urdu/RTL as well as LTR with zero
+    errors, and add before/after screenshots in Urdu.
+-   Keep all UI text in `src/guitext.ts`; do not add third-party
+    libraries; keep the CSS selectors simple and the stylesheet organised
+    (tokens, base, layout, components).
+-   Tests/checks: update `npm run audit:ui` expectations if needed (it
+    must still report zero errors, including contrast and tap targets),
+    keep `npm run smoke:ui`, unit tests and `check:dist` green, and
+    capture before/after screenshots at the main breakpoints for review.
+-   Report any visual checks that need a real device (blur rendering,
+    iOS Safari, low-end Android).
+
+## Task 20 --- Per-day programme and templates
+
+-   Give programme activities a date so each day has its own timetable;
+    add an IndexedDB index by Jamaat and date and a schema migration
+    (v3) that moves existing activities onto a default day without
+    losing any record.
+-   Add reusable programme templates: save a day as a template, copy a
+    template onto a day, and edit templates.
+-   Applying a template to a day that already has customised
+    activities must ask for confirmation and must never overwrite
+    silently (offer replace, append or cancel).
+-   Warn when the same member has overlapping responsibilities, in
+    addition to the existing activity-overlap warning, without
+    rearranging anything.
+-   Keep one central configuration for programme activity types and
+    their labels.
+-   Update backup/restore, summaries and the home view for per-day data;
+    add tests for migration, ordering per day, template apply modes and
+    responsibility overlaps.
+
+## Task 21 --- Ameer appointment completion and mulaqaat planning
+
+-   Add an optional reason to Ameer appointments (migration if the
+    stored shape changes) and show it in the history.
+-   Add an "End now" action that ends a temporary appointment early
+    without deleting it, keeping the history; add tests for ending
+    early, future appointments and crossing midnight.
+-   Support visit planning and follow-up for mulaqaat: planned versus
+    done status, a follow-up note/date, and a view of upcoming planned
+    visits; existing recorded meetings stay valid.
+-   Add a per-member statement view (what the member paid, owes, is owed
+    and bears) derived from the existing ledger and allocation engine
+    without duplicating financial logic.
+-   Add an "Ameer at a chosen date and time" lookup (the derivation
+    already exists and is tested; the UI currently only shows "now"),
+    showing which appointment applies and whether it is permanent or
+    temporary.
+
+## Task 22 --- Attendance with temporary absences
+
+-   Let a member have several presence periods (or absences within the
+    Jamaat period), for example leaving for gasht or a short trip and
+    returning, instead of a single join/leave interval; a member with no
+    absences behaves exactly as today.
+-   Update the eligibility rules and the allocation engine so meal-based
+    and duration-based food splits, equal splits, transport and Ameer
+    eligibility use the member's actual presence at the relevant moment
+    or window, with the same half-open boundary rules and the same
+    deterministic rounding; keep the engine pure and independent of the UI.
+-   Add a schema migration that converts every existing member to the new
+    shape without changing any existing allocation or balance (prove it
+    with before/after tests on realistic synthetic data); update
+    validation, backup/restore (old backups still import) and summaries.
+-   Show late arrivals, early departures and absences clearly in the
+    member views; prevent overlapping or out-of-period absences.
+-   Add thorough tests: boundaries, back-to-back absences, an absence
+    covering a whole meal, expenses spanning an absence, empty groups,
+    migration, and backup round trips.
+
+## Task 23 --- Data-integrity follow-ups
+
+-   **Near-duplicate expenses:** warn (with an explicit "save anyway"
+    confirmation) when a new expense closely matches an existing one
+    (same payer, category and amount within a short time window or with
+    a similar description), in addition to the existing exact-duplicate
+    refusal.
+-   **Legacy participants:** add a migration that resolves and stores the
+    participant list of expenses saved before it was stored, so no
+    historical split can change when members are added or edited; prove
+    that every existing allocation and balance is unchanged.
+-   **Reserved `allocations` store:** decide and implement one of (a)
+    persist the calculated split as an immutable snapshot used by the
+    ledger and statements, or (b) remove the unused store, model and
+    validator through a safe migration and a backward-compatible backup
+    format; document the decision.
+-   **Concurrent edits:** perform the "record unchanged since opened"
+    check inside the same IndexedDB transaction as the write for every
+    record type (not only expenses), so two tabs can never overwrite each
+    other.
+-   Keep the audit log, backup/restore and offline behaviour intact; add
+    tests for each item, including failure injection.
+
+## Task 24 --- Performance conformance
+
+-   Load feature modules on demand per screen (dynamic `import()` of the
+    compiled modules) and include them in the service-worker precache so
+    offline use is unaffected.
+-   Avoid full-view re-rendering where a targeted update is enough, use
+    event delegation for repeated rows, and add the missing IndexedDB
+    indexes (for example expenses by category).
+-   Measure on ordinary mobile hardware (or a throttled CPU/network
+    profile where no device is available), record the measurements, and
+    optimise only where the evidence shows a need.
+-   Re-run all checks, the UI audit and the offline smoke test; report
+    what could only be verified on real devices.
+
+## Task 25 --- Release readiness
+
+-   **Reproducible build:** pin the TypeScript compiler as a build-time
+    `devDependency` with a lockfile (no runtime dependencies) and make
+    `npm ci` plus the documented commands produce the same output
+    locally and in CI.
+-   **CI gates:** make the unit tests, type-check, text check, build and
+    dist check block deployment (already the case); promote the browser
+    smoke test and UI audit (LTR and RTL) to blocking once they are
+    demonstrated stable in CI, or document why they stay advisory.
+-   **Release checklist:** a short, maintained list of the manual checks
+    that automation cannot do (install the PWA on Android and iOS and use
+    it in airplane mode, touch drag-and-drop, screen reader pass in all
+    three languages, native-reader review of the Roman English and Urdu
+    text, restoring a backup on a second real device, real-device
+    performance), with space to record who did them and when.
+-   **Final verification and deployment:** run every check, push, confirm
+    the GitHub Actions deployment is green, run `npm run verify:live`
+    against the published URL, and report exact results; update
+    `README.md`, `PLAN.md` and `docs/AUDIT.md`. Do not claim a deployment
+    that was not verified.
+
+------------------------------------------------------------------------
+
 # Definition of done
 
-The application is complete only when all tasks have been explicitly
-requested and completed, the available checks have been run, and
-remaining limitations are reported honestly. A task is not complete
+The application is complete only when all tasks (including the
+follow-up tasks 18--25) have been explicitly requested and completed,
+the available checks have been run, every entry in the known gaps
+register is closed or explicitly accepted, and remaining limitations
+are reported honestly. A task is not complete
 merely because its UI exists: relevant data must persist, calculations
 must be correct, errors must be handled, and tests must be run where
 possible.

@@ -10,7 +10,7 @@ export const appointment = () => ({ id: "a1", jamaatId: "j1", memberId: "m1", ki
 export const expense = () => ({
   id: "e1", jamaatId: "j1", category: "general", date: T0, description: "Water", amountPaise: 12345,
   paymentSource: "member", payerId: "m1", counterpartyId: null, linkedExpenseId: null, participantIds: ["m1"],
-  foodBasis: null, treatKind: null, mealTimes: [], periodFrom: null, periodTo: null, ...stamps,
+  foodBasis: null, treatKind: null, vehicle: null, transportCost: null, mealTimes: [], periodFrom: null, periodTo: null, ...stamps,
 });
 export const allocation = () => ({ id: "al1", expenseId: "e1", beneficiaryId: "m1", owedById: "m1", bearerId: null, amountPaise: 100, basis: "12345 / 1", ...stamps });
 export const activity = () => ({ id: "p1", jamaatId: "j1", title: "Taleem", startMin: 600, endMin: 660, location: "", responsibleIds: [], order: 0, notes: "", ...stamps });

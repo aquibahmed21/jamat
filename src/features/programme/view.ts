@@ -13,6 +13,8 @@ import { emptyState } from "../../ui/states.ts";
 import { listMembers, loadJamaat } from "../members/service.ts";
 import type { ViewContext } from "../members/view.ts";
 import { addStandardProgramme, applyOrder, deleteActivity, loadProgramme, saveActivity } from "./service.ts";
+import { byLabel, focusAfterRender } from "../../ui/focus.ts";
+import { notify } from "../../ui/toast.ts";
 
 const LIST = "#/programme";
 
@@ -45,8 +47,19 @@ function timetable(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], 
   const overlaps = findOverlaps(items);
   const clashes = (id: string) => overlaps.flatMap((o) => (o.a === id ? [o.b] : o.b === id ? [o.a] : []));
 
-  const persist = async (ordered: ProgrammeActivity[]) => {
-    try { await applyOrder(db, items, ordered); } catch (e) { await alertDialog(t.title, errorText(e)); }
+  /** Saves a new order; focus returns to the same control afterwards and the move is announced. */
+  const persist = async (ordered: ProgrammeActivity[], moved?: ProgrammeActivity, control?: "moveUp" | "moveDown") => {
+    try {
+      await applyOrder(db, items, ordered);
+      if (moved) {
+        notify(fmt(t.moved, { title: moved.title, n: ordered.findIndex((x) => x.id === moved.id) + 1 }));
+        if (control) {
+          // The other arrow is the fallback when this one is disabled at the end of the list.
+          const other = control === "moveUp" ? "moveDown" : "moveUp";
+          focusAfterRender(byLabel(`${t[control]}: ${moved.title}`), byLabel(`${t[other]}: ${moved.title}`));
+        }
+      }
+    } catch (e) { await alertDialog(t.title, errorText(e)); }
     ctx.refresh();
   };
 
@@ -55,7 +68,7 @@ function timetable(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], 
       title: t.deleteTitle, message: fmt(t.deleteText, { title: a.title }), confirmLabel: c.delete, destructive: true,
     });
     if (!ok) return;
-    try { await deleteActivity(db, a.id); } catch (e) { await alertDialog(t.title, errorText(e)); }
+    try { await deleteActivity(db, a.id); notify(c.deleted); } catch (e) { await alertDialog(t.title, errorText(e)); }
     ctx.refresh();
   };
 
@@ -74,8 +87,8 @@ function timetable(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], 
           : null,
       ),
       el("div", { class: "row-actions" },
-        (() => { const b = button({ label: `${t.moveUp}: ${a.title}`, icon: "up", iconOnly: true, onClick: () => void persist(moveBy(items, a.id, -1)) }); b.disabled = index === 0; return b; })(),
-        (() => { const b = button({ label: `${t.moveDown}: ${a.title}`, icon: "down", iconOnly: true, onClick: () => void persist(moveBy(items, a.id, 1)) }); b.disabled = index === items.length - 1; return b; })(),
+        (() => { const b = button({ label: `${t.moveUp}: ${a.title}`, icon: "up", iconOnly: true, onClick: () => void persist(moveBy(items, a.id, -1), a, "moveUp") }); b.disabled = index === 0; return b; })(),
+        (() => { const b = button({ label: `${t.moveDown}: ${a.title}`, icon: "down", iconOnly: true, onClick: () => void persist(moveBy(items, a.id, 1), a, "moveDown") }); b.disabled = index === items.length - 1; return b; })(),
         button({ label: `${c.edit}: ${a.title}`, icon: "edit", iconOnly: true, onClick: () => ctx.go(`${LIST}/edit/${a.id}`) }),
         button({ label: `${c.delete}: ${a.title}`, icon: "delete", iconOnly: true, onClick: () => void remove(a) }),
       ),
@@ -106,7 +119,7 @@ function timetable(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], 
       if (from < to) to -= 1; // the dragged item leaves its old slot first
       const id = dragId;
       dragId = null;
-      void persist(moveTo(items, id, to));
+      void persist(moveTo(items, id, to), items.find((x) => x.id === id));
     });
     return li;
   };
@@ -121,7 +134,7 @@ function timetable(ctx: ViewContext, db: Db, jamaat: Jamaat, members: Member[], 
               title: t.standardTitle, message: fmt(t.standardText, { n: STANDARD_PROGRAMME.length }), confirmLabel: t.addStandard,
             });
             if (!ok) return;
-            try { await addStandardProgramme(db, jamaat.id, t.presets as Record<PresetKey, string>, items); }
+            try { await addStandardProgramme(db, jamaat.id, t.presets as Record<PresetKey, string>, items); notify(gt().common.saved); }
             catch (e) { await alertDialog(t.title, errorText(e)); }
             ctx.refresh();
           },
@@ -173,6 +186,6 @@ function activityForm(
       notes: fields.notes.input.value,
       createdAt, updatedAt: Math.max(createdAt, Date.now()),
     }),
-    save: (input) => saveActivity(db, input, current === null),
+    save: (input) => saveActivity(db, input, current === null, current?.updatedAt),
   });
 }

@@ -9,13 +9,13 @@ export async function loadPlaces(db: Db) {
   return { items: [...l.items].sort((a, b) => a.name.localeCompare(b.name) || (a.id < b.id ? -1 : 1)), malformed: l.malformed };
 }
 
-export async function savePlace(db: Db, input: unknown, isNew: boolean): Promise<Result<Place>> {
+export async function savePlace(db: Db, input: unknown, isNew: boolean, expectedUpdatedAt?: number): Promise<Result<Place>> {
   const v = validatePlace(input);
   if (!v.ok) return v;
   const issues = placeConflicts(v.value, (await db.places.list()).items);
   if (issues.length > 0) return { ok: false, issues };
   if (isNew) await db.places.add(v.value);
-  else await db.places.update(v.value);
+  else await db.places.update(v.value, expectedUpdatedAt);
   return v;
 }
 
@@ -31,7 +31,7 @@ export async function loadMulaqaat(db: Db, jamaatId: string) {
   return { items: [...l.items].sort((a, b) => b.at - a.at || (a.id < b.id ? -1 : 1)), malformed: l.malformed };
 }
 
-export async function saveMulaqaat(db: Db, input: unknown, isNew: boolean): Promise<Result<Mulaqaat>> {
+export async function saveMulaqaat(db: Db, input: unknown, isNew: boolean, expectedUpdatedAt?: number): Promise<Result<Mulaqaat>> {
   const v = validateMulaqaat(input);
   if (!v.ok) return v;
   const jamaat = await db.jamaats.get(v.value.jamaatId);
@@ -40,7 +40,7 @@ export async function saveMulaqaat(db: Db, input: unknown, isNew: boolean): Prom
   const issues = mulaqaatConflicts(v.value, jamaat, members.items, places.items);
   if (issues.length > 0) return { ok: false, issues };
   if (isNew) await db.mulaqaat.add(v.value);
-  else await db.mulaqaat.update(v.value);
+  else await db.mulaqaat.update(v.value, expectedUpdatedAt);
   return v;
 }
 

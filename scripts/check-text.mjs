@@ -7,6 +7,9 @@ const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) =>
   e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]);
 
 const rules = [
+  // security: DOM sinks that parse HTML/JS from strings must never appear (all text goes through textContent)
+  [/\.(?:outerHTML|insertAdjacentHTML)\b|document\.write\(|\beval\(|new Function\(|\bsetTimeout\(\s*["'`]/, "dangerous DOM/JS sink"],
+  [/setAttribute\(\s*["']on[a-z]+["']|["']javascript:/i, "inline handler or javascript: URL"],
   [/\b(?:text|textContent|innerText|title|placeholder|alt)\s*[:=]\s*["'`][^"'`]*[A-Za-z]/, "string literal assigned to a text property"],
   [/\.innerHTML\s*=/, "innerHTML assignment"],
   [/\b(?:alert|confirm|prompt)\s*\(/, "native dialog"],
