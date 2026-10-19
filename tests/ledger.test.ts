@@ -208,12 +208,16 @@ test("batch is atomic: a failing operation leaves nothing behind", async () => {
   assert.ok(await db.expenses.get("e1"));
 });
 
-test("audit validation: snapshot shape per action", () => {
+test("audit validation: snapshot shape per action; snapshots must be valid expenses", () => {
   const at = { id: "x1", at: f.T0, entityType: "expense", entityId: "e1" };
-  assert.ok(validateAudit({ ...at, action: "create", before: null, after: { a: 1 } }).ok);
-  assert.ok(validateAudit({ ...at, action: "update", before: { a: 1 }, after: { a: 2 } }).ok);
-  assert.ok(validateAudit({ ...at, action: "delete", before: { a: 1 }, after: null }).ok);
-  assert.ok(!validateAudit({ ...at, action: "create", before: { a: 1 }, after: { a: 1 } }).ok);
+  const e1 = f.expense();
+  const e2 = { ...f.expense(), amountPaise: 999 };
+  assert.ok(validateAudit({ ...at, action: "create", before: null, after: e1 }).ok);
+  assert.ok(validateAudit({ ...at, action: "update", before: e1, after: e2 }).ok);
+  assert.ok(validateAudit({ ...at, action: "delete", before: e1, after: null }).ok);
+  assert.ok(!validateAudit({ ...at, action: "create", before: e1, after: e1 }).ok);
   assert.ok(!validateAudit({ ...at, action: "delete", before: null, after: null }).ok);
-  assert.ok(!validateAudit({ ...at, action: "update", before: "x", after: {} }).ok);
+  assert.ok(!validateAudit({ ...at, action: "update", before: "x", after: e1 }).ok);
+  assert.ok(!validateAudit({ ...at, action: "create", before: null, after: { a: 1 } }).ok); // not an expense
+  assert.ok(!validateAudit({ ...at, action: "create", before: null, after: { ...e1, amountPaise: -5 } }).ok);
 });

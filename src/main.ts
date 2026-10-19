@@ -6,12 +6,33 @@ import { errorText } from "./ui/errors.ts";
 import { renderMembers, type ViewContext } from "./features/members/view.ts";
 import { renderExpenses } from "./features/expenses/view.ts";
 import { renderProgramme } from "./features/programme/view.ts";
+import { renderPlaces } from "./features/places/view.ts";
+import { renderHome } from "./features/home/view.ts";
+import { renderBackup } from "./features/backup/view.ts";
+import { startPwa } from "./pwa.ts";
+import { button } from "./ui/button.ts";
 
 const routes: RouteKey[] = ["home", "members", "expenses", "programme", "places", "backup"];
 const title = document.getElementById("app-title") as HTMLElement;
 const lang = document.getElementById("lang") as HTMLElement;
 const nav = document.getElementById("nav") as HTMLElement;
 const view = document.getElementById("view") as HTMLElement;
+const banner = document.getElementById("banner") as HTMLElement;
+const net = document.getElementById("net") as HTMLElement;
+
+let applyUpdate: (() => void) | null = null;
+let online = true;
+
+/** Update prompt and offline badge: both are redrawn on language change. */
+function renderStatus(): void {
+  const t = gt().pwa;
+  net.hidden = online;
+  net.textContent = online ? "" : t.offline;
+  banner.hidden = applyUpdate === null;
+  if (applyUpdate === null) return;
+  const apply = applyUpdate;
+  banner.replaceChildren(el("span", { text: t.updateReady }), button({ label: t.reload, icon: "check", variant: "primary", onClick: apply }));
+}
 
 function parseHash(): { route: RouteKey | null; rest: string[] } {
   const [key = "", ...rest] = location.hash.replace(/^#\/?/, "").split("/");
@@ -49,9 +70,12 @@ function renderNav(active: RouteKey | null): void {
 }
 
 const renderers: Partial<Record<RouteKey, (ctx: ViewContext) => Promise<HTMLElement>>> = {
+  home: renderHome,
   members: renderMembers,
   expenses: renderExpenses,
   programme: renderProgramme,
+  places: renderPlaces,
+  backup: renderBackup,
 };
 
 let renderToken = 0;
@@ -86,6 +110,7 @@ function render(): void {
   document.documentElement.lang = getLanguage() === "en" ? "en" : "ur-Latn";
   title.textContent = gt().appName;
   renderLanguage();
+  renderStatus();
   renderNav(route);
   void renderView(route, rest);
 }
@@ -94,3 +119,7 @@ loadLanguage();
 onLanguageChange(render);
 window.addEventListener("hashchange", () => { render(); view.focus(); });
 render();
+startPwa({
+  onUpdateReady: (apply) => { applyUpdate = apply; renderStatus(); },
+  onOnlineChange: (v) => { online = v; renderStatus(); },
+});

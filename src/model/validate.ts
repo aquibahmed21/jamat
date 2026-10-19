@@ -9,7 +9,7 @@ export const VALIDATION_CODES = [
   "invalidId", "invalidEnum", "invalidOrder", "invalidCombo", "duplicate", "invalidPhone",
   "beforeJamaatStart", "afterJamaatEnd", "duplicateName", "conflictsWithMembers",
   "notAMember", "overlap", "duplicateExpense", "samePartyTransfer", "notEligible",
-  "linkInvalid", "overRefund", "overReimburse", "overSettle", "ledgerConflict",
+  "linkInvalid", "overRefund", "overReimburse", "overSettle", "ledgerConflict", "duplicatePlace",
 ] as const;
 export type ValidationCode = (typeof VALIDATION_CODES)[number];
 
@@ -360,6 +360,13 @@ export function validateAudit(input: unknown): Result<AuditEntry> {
     if (v.action === "create" && (v.before !== null || v.after === null)) r.fail("after", "invalidCombo");
     if (v.action === "update" && (v.before === null || v.after === null)) r.fail("after", "invalidCombo");
     if (v.action === "delete" && (v.before === null || v.after !== null)) r.fail("before", "invalidCombo");
+  });
+  // Snapshots are shown in the history view, so they must be well-formed expense records.
+  r.cross(() => {
+    for (const key of ["before", "after"] as const) {
+      const snap = v[key];
+      if (snap !== null && !validateExpense(snap).ok) r.fail(key, "invalidType");
+    }
   });
   return r.done(v);
 }

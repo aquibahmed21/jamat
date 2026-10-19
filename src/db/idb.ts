@@ -99,9 +99,12 @@ class IdbBackend implements Backend {
             const put = store.put(o.value);
             put.onsuccess = () => step(i + 1);
           };
-        } else {
+        } else if (o.op === "remove") {
           const del = store.delete(o.id);
           del.onsuccess = () => step(i + 1);
+        } else {
+          const clr = store.clear();
+          clr.onsuccess = () => step(i + 1);
         }
       };
       step(0);
@@ -120,7 +123,7 @@ function defaultFactory(): IDBFactory | null {
  * Opens (and if needed upgrades) the database. Never deletes or resets existing data:
  * a newer on-disk version, blocked upgrades and failed migrations are reported as DbError.
  */
-export function openIdb(factory: IDBFactory | null = defaultFactory()): Promise<Backend> {
+export function openIdb(factory: IDBFactory | null = defaultFactory(), onClose?: () => void): Promise<Backend> {
   return new Promise((resolve, reject) => {
     if (!factory) { reject(new DbError("unavailable")); return; }
     let req: IDBOpenDBRequest;
@@ -146,7 +149,9 @@ export function openIdb(factory: IDBFactory | null = defaultFactory()): Promise<
     req.onsuccess = () => {
       const db = req.result;
       if (settled) { db.close(); return; } // we already reported "blocked"
-      db.onversionchange = () => db.close(); // let a newer tab upgrade
+      // Let another tab upgrade or delete the database; tell the owner so it can reopen on next use.
+      db.onversionchange = () => { db.close(); onClose?.(); };
+      db.onclose = () => onClose?.();
       settled = true;
       resolve(new IdbBackend(db));
     };

@@ -85,6 +85,10 @@ export class Repo<T extends { id: string }> {
     return { op: "replace", store: this.def.name, value: this.checked(input) };
   }
 
+  clearOp(): BatchOp {
+    return { op: "clear", store: this.def.name };
+  }
+
   removeOp(id: string): BatchOp {
     return { op: "remove", store: this.def.name, id };
   }

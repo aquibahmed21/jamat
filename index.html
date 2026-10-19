@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f6b4f">
   <title></title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="stylesheet" href="./styles/main.css">
 </head>
 <body>
   <div class="app">
-    <header class="topbar"><h1 id="app-title" class="brand"></h1><div id="lang" class="lang"></div></header>
+    <header class="topbar"><h1 id="app-title" class="brand"></h1><span id="net" class="net" hidden></span><div id="lang" class="lang"></div></header>
+    <div id="banner" class="banner" role="status" hidden></div>
     <nav id="nav" class="nav"></nav>
     <main id="view" class="view" tabindex="-1"></main>
   </div>

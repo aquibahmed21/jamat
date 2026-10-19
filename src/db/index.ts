@@ -13,6 +13,12 @@ function def<T extends { id: string }>(name: string, indexes: readonly string[],
   return { name, indexes, validate };
 }
 
+/** Store names in dependency order (parents first). Each is also the matching property of Db. */
+export const STORE_NAMES = [
+  "jamaats", "members", "places", "appointments", "expenses", "allocations", "activities", "mulaqaat", "audit",
+] as const;
+export type StoreName = (typeof STORE_NAMES)[number];
+
 export interface Db {
   jamaats: Repo<Jamaat>;
   members: Repo<Member>;
@@ -45,8 +51,8 @@ export function createDb(backend: Backend): Db {
 }
 
 /** Opens the real IndexedDB database. Rejects with DbError (e.g. "unavailable") - never resets data. */
-export async function openDb(): Promise<Db> {
-  return createDb(await openIdb());
+export async function openDb(onClose?: () => void): Promise<Db> {
+  return createDb(await openIdb(undefined, onClose));
 }
 
 let shared: Promise<Db> | null = null;
@@ -54,7 +60,7 @@ let shared: Promise<Db> | null = null;
 /** App-wide connection, opened once. A failed open is not cached, so callers can retry. */
 export function getDb(): Promise<Db> {
   if (!shared) {
-    shared = openDb().catch((e) => {
+    shared = openDb(() => { shared = null; }).catch((e) => {
       shared = null;
       throw e;
     });

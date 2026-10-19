@@ -19,7 +19,9 @@ export interface Backend {
 export type BatchOp =
   | { op: "add"; store: string; value: { id: string } }
   | { op: "replace"; store: string; value: { id: string } }
-  | { op: "remove"; store: string; id: string };
+  | { op: "remove"; store: string; id: string }
+  /** Removes every record of the store (used by restore). */
+  | { op: "clear"; store: string };
 
 export interface StoreDef<T extends { id: string }> {
   name: string;

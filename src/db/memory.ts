@@ -46,7 +46,8 @@ export class MemoryBackend implements Backend {
       for (const o of ops) {
         if (o.op === "add") await this.add(o.store, o.value);
         else if (o.op === "replace") await this.replace(o.store, o.value);
-        else await this.remove(o.store, o.id);
+        else if (o.op === "remove") await this.remove(o.store, o.id);
+        else this.table(o.store).clear();
       }
     } catch (e) {
       this.data = snapshot;
